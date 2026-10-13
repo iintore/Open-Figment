@@ -1,0 +1,23 @@
+# Dependencies and build output
+node_modules
+dist
+dist-ssr
+release
+*.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Editor and OS files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.sw?
+
+# Environment files (the app doesn't need any; never commit secrets)
+.env
+.env.*

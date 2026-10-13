@@ -1,0 +1,115 @@
+{
+  "name": "figment",
+  "productName": "Figment",
+  "private": true,
+  "version": "1.1.0",
+  "description": "Open Figment: an open-source collaborative design tool",
+  "author": "Tony Lewis MANZI",
+  "license": "MIT",
+  "homepage": "https://github.com/iintore/open-figment#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/iintore/open-figment.git"
+  },
+  "bugs": {
+    "url": "https://github.com/iintore/open-figment/issues"
+  },
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc -b",
+    "lint": "oxlint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run typecheck && npm run lint && npm test && vite build",
+    "preview": "vite preview",
+    "desktop": "vite build && electron .",
+    "desktop:dev": "FIGMENT_DEV_URL=http://localhost:5173/ electron .",
+    "icon": "electron scripts/make-icon.cjs",
+    "dist:mac": "vite build && electron-builder --mac"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "nanoid": "^5.1.16",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "electron": "^44.7.1",
+    "electron-builder": "^26.15.3",
+    "oxlint": "^1.81.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.4"
+  },
+  "build": {
+    "appId": "com.figment.desktop",
+    "productName": "Figment",
+    "copyright": "Copyright © 2026 Tony Lewis MANZI and Open Figment contributors. MIT License.",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json",
+      "LICENSE",
+      "THIRD_PARTY_NOTICES.md",
+      "licenses/**/*",
+      "!node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.graphics-design",
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "identity": null,
+      "hardenedRuntime": false,
+      "darkModeSupport": true
+    },
+    "dmg": {
+      "title": "Figment",
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true,
+      "resetAdHocDarwinSignature": true
+    }
+  }
+}

@@ -1,0 +1,21 @@
+// Renders build/icon.png (1024×1024) from the app's original logo using offscreen Electron.
+const { app, BrowserWindow } = require('electron');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs><filter id="s" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity="0.22"/></filter></defs>
+  <g filter="url(#s)" transform="translate(100 100) scale(12.875)"><rect width="64" height="64" rx="14" fill="#FFC531"/><circle cx="13.5" cy="31" r="7.5" fill="#7A4A2B"/><circle cx="50.5" cy="31" r="7.5" fill="#7A4A2B"/><circle cx="13.5" cy="31" r="4" fill="#F4C9A1"/><circle cx="50.5" cy="31" r="4" fill="#F4C9A1"/><circle cx="32" cy="31" r="17.5" fill="#8B5532"/><path d="M27 14.5c1.5-3.5 5.5-4.5 8-2.5-2.5.2-3.8 1.4-4.2 3z" fill="#8B5532"/><path d="M32 21.5c2.2-2 4.6-3 7-3 4.6 0 7.2 3.6 7.2 7.6 0 2.4-1 4-2.2 5.2 1.8 1.4 2.6 3.2 2.6 5.2 0 5.2-5.6 9-12.6 9s-12.6-3.8-12.6-9c0-2 .8-3.8 2.6-5.2-1.2-1.2-2.2-2.8-2.2-5.2 0-4 2.6-7.6 7.2-7.6 2.4 0 4.8 1 7 3z" fill="#F4C9A1"/><circle cx="25.5" cy="27.5" r="2.6" fill="#2A1A10"/><circle cx="38.5" cy="27.5" r="2.6" fill="#2A1A10"/><circle cx="26.3" cy="26.7" r=".9" fill="#fff"/><circle cx="39.3" cy="26.7" r=".9" fill="#fff"/><ellipse cx="29.6" cy="34.2" rx="1.3" ry="1" fill="#6B3E22"/><ellipse cx="34.4" cy="34.2" rx="1.3" ry="1" fill="#6B3E22"/><path d="M26 38.5c1.6 2.6 3.8 3.8 6 3.8s4.4-1.2 6-3.8" fill="none" stroke="#6B3E22" stroke-width="2" stroke-linecap="round"/><circle cx="23.8" cy="36.4" r="2.2" fill="#F29A8C" opacity=".7"/><circle cx="40.2" cy="36.4" r="2.2" fill="#F29A8C" opacity=".7"/></g>
+</svg>`;
+
+app.disableHardwareAcceleration();
+app.whenReady().then(async () => {
+  const win = new BrowserWindow({ width: 1024, height: 1024, show: false, transparent: true, frame: false, webPreferences: { offscreen: true } });
+  await win.loadURL('data:text/html,' + encodeURIComponent(`<html><body style="margin:0;background:transparent">${svg}</body></html>`));
+  await new Promise((r) => setTimeout(r, 300));
+  const img = await win.webContents.capturePage({ x: 0, y: 0, width: 1024, height: 1024 });
+  const out = path.join(__dirname, '..', 'build', 'icon.png');
+  fs.writeFileSync(out, img.resize({ width: 1024, height: 1024 }).toPNG());
+  console.log('wrote', out);
+  app.quit();
+});
