@@ -52,7 +52,7 @@ function Rail() {
   const variablesOpen = useStore((s) => s.variablesOpen);
   return (
     <nav className="rail" aria-label="Navigation">
-      <button className="rail-logo" title="Main menu" onClick={(e) => openMenuAt(e.currentTarget, buildMainMenu())}>
+      <button className="rail-logo" title="Main menu" aria-label="Main menu" aria-haspopup="menu" onClick={(e) => openMenuAt(e.currentTarget, buildMainMenu())}>
         <Monkey size={26} />
       </button>
       <div className="rail-sep" />

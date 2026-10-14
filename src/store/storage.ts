@@ -1,23 +1,22 @@
 import type { DocumentData, FileMeta } from '../model/types';
 
 const DB_NAME = 'figment';
-// Files saved before the rename live in this database; they are copied over once on first open.
+// Files saved before the rename live in this database; they are copied over on start.
 const LEGACY_DB_NAME = 'figma-clone';
 // v2 keeps each file's saved versions in their own store, so autosave doesn't rewrite them.
 const VERSION = 2;
 const STORES = ['meta', 'docs', 'images', 'versions'] as const;
 let dbp: Promise<IDBDatabase> | null = null;
 
-function openDb(name: string, onCreate?: () => void): Promise<IDBDatabase> {
+function openDb(name: string): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(name, VERSION);
-    req.onupgradeneeded = (e) => {
+    req.onupgradeneeded = () => {
       const d = req.result;
       if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta', { keyPath: 'id' });
       if (!d.objectStoreNames.contains('docs')) d.createObjectStore('docs', { keyPath: 'id' });
       if (!d.objectStoreNames.contains('images')) d.createObjectStore('images');
       if (!d.objectStoreNames.contains('versions')) d.createObjectStore('versions');
-      if (e.oldVersion === 0) onCreate?.();
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -26,39 +25,12 @@ function openDb(name: string, onCreate?: () => void): Promise<IDBDatabase> {
 
 /** Resolves with the request's result once the transaction commits; rejects if it aborts (e.g. quota exceeded). */
 function run<T>(t: IDBTransaction, req: IDBRequest<T>): Promise<T> {
+  // Listeners (not on* properties) so several requests can wait on the same transaction.
   return new Promise<T>((resolve, reject) => {
-    t.oncomplete = () => resolve(req.result);
-    t.onabort = () => reject(t.error ?? new Error('Storage transaction aborted'));
-    t.onerror = () => reject(t.error ?? req.error);
+    t.addEventListener('complete', () => resolve(req.result));
+    t.addEventListener('abort', () => reject(t.error ?? new Error('Storage transaction aborted')));
+    t.addEventListener('error', () => reject(t.error ?? req.error));
   });
-}
-
-async function migrateLegacy(target: IDBDatabase) {
-  const known = (await indexedDB.databases?.().catch(() => [])) ?? [];
-  if (!known.some((d) => d.name === LEGACY_DB_NAME)) return;
-  const legacy = await openExisting(LEGACY_DB_NAME);
-  for (const name of STORES) {
-    if (!legacy.objectStoreNames.contains(name)) continue;
-    const rt = legacy.transaction(name, 'readonly');
-    const [keys, values] = await Promise.all([run(rt, rt.objectStore(name).getAllKeys()), run(rt, rt.objectStore(name).getAll())]);
-    const wt = target.transaction(name, 'readwrite');
-    const s = wt.objectStore(name);
-    const done = run(wt, s.count());
-    values.forEach((v, i) => (s.keyPath ? s.put(v) : s.put(v, keys[i])));
-    await done;
-  }
-  legacy.close();
-  markMigrated();
-  indexedDB.deleteDatabase(LEGACY_DB_NAME);
-}
-
-const MIGRATED_KEY = 'figment.legacyMigrated';
-function markMigrated() {
-  try {
-    localStorage.setItem(MIGRATED_KEY, '1');
-  } catch {
-    /* storage unavailable */
-  }
 }
 
 function openExisting(name: string): Promise<IDBDatabase> {
@@ -69,42 +41,62 @@ function openExisting(name: string): Promise<IDBDatabase> {
   });
 }
 
-async function keysOf(d: IDBDatabase, store: string): Promise<IDBValidKey[]> {
-  if (!d.objectStoreNames.contains(store)) return [];
-  const t = d.transaction(store, 'readonly');
-  return run(t, t.objectStore(store).getAllKeys());
+const copiedKey = (store: string) => `figment.legacyCopied.${store}`;
+function loadCopied(store: string): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(copiedKey(store)) ?? '[]') as string[];
+  } catch {
+    return [];
+  }
+}
+function saveCopied(store: string, keys: string[]) {
+  try {
+    localStorage.setItem(copiedKey(store), JSON.stringify(keys));
+  } catch {
+    /* storage unavailable: worst case a deleted old file is copied again */
+  }
 }
 
 /**
- * Deleting the old database is blocked while an older build still has it open, so it's retried
- * on later starts, once every old file is known to exist in the new database.
+ * Copies files saved by older builds (database `figma-clone`) into this database. Only records
+ * missing here are copied, so it's safe to run on every start; once everything is copied the
+ * old database is deleted (that's retried later if an older build still has it open).
  */
-async function removeMigratedLegacy(target: IDBDatabase) {
+async function migrateLegacy(target: IDBDatabase) {
   const known = (await indexedDB.databases?.().catch(() => [])) ?? [];
   if (!known.some((d) => d.name === LEGACY_DB_NAME)) return;
-  let migrated = false;
+  const legacy = await openExisting(LEGACY_DB_NAME);
   try {
-    migrated = localStorage.getItem(MIGRATED_KEY) === '1';
-  } catch {
-    /* storage unavailable */
-  }
-  if (!migrated) {
-    const legacy = await openExisting(LEGACY_DB_NAME);
-    const [old, cur] = await Promise.all([keysOf(legacy, 'docs'), keysOf(target, 'docs')]);
+    for (const name of STORES) {
+      if (!legacy.objectStoreNames.contains(name)) continue;
+      const rt = legacy.transaction(name, 'readonly');
+      const [keys, values] = await Promise.all([run(rt, rt.objectStore(name).getAllKeys()), run(rt, rt.objectStore(name).getAll())]);
+      const ht = target.transaction(name, 'readonly');
+      const have = new Set((await run(ht, ht.objectStore(name).getAllKeys())).map(String));
+      // Records copied on an earlier start and deleted since must not come back.
+      const copied = new Set(loadCopied(name));
+      const missing = keys.map((k, i) => [k, values[i]] as const).filter(([k]) => !have.has(String(k)) && !copied.has(String(k)));
+      if (!missing.length) continue;
+      const wt = target.transaction(name, 'readwrite');
+      const s = wt.objectStore(name);
+      const done = run(wt, s.count());
+      for (const [k, v] of missing) {
+        if (s.keyPath) s.put(v);
+        else s.put(v, k);
+      }
+      await done;
+      saveCopied(name, [...copied, ...missing.map(([k]) => String(k))]);
+    }
+  } finally {
     legacy.close();
-    const have = new Set(cur.map(String));
-    if (!old.every((k) => have.has(String(k)))) return;
-    markMigrated();
   }
   indexedDB.deleteDatabase(LEGACY_DB_NAME);
 }
 
 function db(): Promise<IDBDatabase> {
   if (!dbp) {
-    let created = false;
-    dbp = openDb(DB_NAME, () => (created = true)).then(async (d) => {
-      if (created) await migrateLegacy(d).catch((err) => console.warn('Could not migrate saved files', err));
-      else void removeMigratedLegacy(d).catch(() => undefined);
+    dbp = openDb(DB_NAME).then(async (d) => {
+      await migrateLegacy(d).catch((err) => console.warn('Could not migrate saved files', err));
       return d;
     });
   }
