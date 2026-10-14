@@ -689,38 +689,91 @@ function syncInstance(doc: DocumentData, inst: SceneNode) {
   for (const id of keep) if (doc.nodes[id]) fitText(doc.nodes[id]);
 }
 
-function geometrySum(doc: DocumentData): number {
+function geometrySum(doc: DocumentData, roots: string[]): number {
   let s = 0;
-  for (const id in doc.nodes) {
+  const walk = (id: string) => {
     const n = doc.nodes[id];
+    if (!n) return;
     s += n.x * 3 + n.y * 5 + n.w * 7 + n.h * 11;
-  }
+    for (const c of n.children ?? []) walk(c);
+  };
+  for (const id of roots) walk(id);
   return s;
 }
 
-/** Whether a change to these nodes can affect any instance (they're in or around a component or instance). */
-function touchesInstances(doc: DocumentData, touched: string[]): boolean {
-  return touched.some((id) => {
+interface FinalizeScope {
+  /** Top-level instances to rebuild. */
+  instances: SceneNode[];
+  /** Top-level layers to lay out again. */
+  roots: Set<string>;
+}
+
+/**
+ * Works out what an edit to `touched` can affect: instances of any component it changed
+ * (directly or through nested instances), instances it's inside or contains, and the top-level
+ * layers holding all of those. Returns null when the whole document has to be redone.
+ */
+function scopeOf(doc: DocumentData, touched: string[]): FinalizeScope | null {
+  const top = (id: string) => {
+    let n = doc.nodes[id];
+    while (n && doc.nodes[n.parentId]) n = doc.nodes[n.parentId];
+    return n?.id;
+  };
+  const roots = new Set<string>();
+  const changedComponents = new Set<string>();
+  const instanceIds = new Set<string>();
+  const isTopInstance = (n: SceneNode | undefined) => n?.type === 'INSTANCE' && !n.refId;
+  for (const id of touched) {
+    if (isPageId(doc, id)) continue;
     const n = doc.nodes[id];
-    if (!n) return !isPageId(doc, id); // deleted: be safe
-    const isSource = (x: SceneNode | undefined) => !!x && (x.type === 'COMPONENT' || x.type === 'INSTANCE' || !!x.refId);
-    if (isSource(n) || ancestors(doc, id).some(isSource)) return true;
-    return descendants(doc, id).some((d) => isSource(doc.nodes[d]));
-  });
+    if (!n) return null;
+    roots.add(top(id)!);
+    for (const a of [n, ...ancestors(doc, id)]) {
+      if (a.type === 'COMPONENT') changedComponents.add(a.id);
+      if (isTopInstance(a)) instanceIds.add(a.id);
+    }
+    for (const d of descendants(doc, id)) if (isTopInstance(doc.nodes[d])) instanceIds.add(d);
+  }
+  if (changedComponents.size) {
+    // Components showing a changed component through their own instances changed too.
+    const all = Object.values(doc.nodes);
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const n of all) {
+        if (n.type !== 'INSTANCE' || !n.mainComponentId || !changedComponents.has(n.mainComponentId)) continue;
+        const host = [n, ...ancestors(doc, n.id)].find((a) => a.type === 'COMPONENT');
+        if (host && !changedComponents.has(host.id)) {
+          changedComponents.add(host.id);
+          grew = true;
+        }
+      }
+    }
+    for (const n of all) if (isTopInstance(n) && changedComponents.has(n.mainComponentId ?? '')) instanceIds.add(n.id);
+  }
+  const instances = [...instanceIds].map((id) => doc.nodes[id]);
+  for (const i of instances) roots.add(top(i.id)!);
+  return { instances, roots };
 }
 
 /**
  * Brings derived state up to date after an edit: instance contents, text sizes, group bounds
  * and auto layout. `touched` optionally lists the nodes an edit changed (plus their previous
- * parents); when none of them can affect an instance, instance syncing is skipped.
+ * parents); then only the instances and top-level layers that edit can affect are updated.
  */
 export function finalize(doc: DocumentData, touched?: string[]) {
   // Instances first (in order of nesting depth of their main component — run twice for nested instances).
-  const instances = touched && !touchesInstances(doc, touched) ? [] : Object.values(doc.nodes).filter((n) => n.type === 'INSTANCE' && !n.refId);
+  const scope = touched ? scopeOf(doc, touched) : null;
+  const instances = scope ? scope.instances : Object.values(doc.nodes).filter((n) => n.type === 'INSTANCE' && !n.refId);
   for (let pass = 0; pass < 2; pass++) for (const i of instances) if (doc.nodes[i.id]) syncInstance(doc, i);
   // Nested instances inside instances are rebuilt as part of the parent clone.
 
+  // Layout only depends on a layer's own subtree, so a scoped edit only re-lays-out the
+  // top-level layers it affected.
+  const only = scope?.roots ?? null;
   for (const page of doc.pages) {
+    const roots = only ? page.children.filter((id) => only.has(id)) : page.children;
+    if (!roots.length) continue;
     const post = (id: string) => {
       const n = doc.nodes[id];
       if (!n) return;
@@ -737,8 +790,8 @@ export function finalize(doc: DocumentData, touched?: string[]) {
     // Nested FILL/HUG chains settle over several passes; stop as soon as nothing moves.
     let prev = NaN;
     for (let pass = 0; pass < 6; pass++) {
-      for (const id of [...page.children]) post(id);
-      const sum = geometrySum(doc);
+      for (const id of [...roots]) post(id);
+      const sum = geometrySum(doc, roots);
       if (Math.abs(sum - prev) < 1e-6) break;
       prev = sum;
     }

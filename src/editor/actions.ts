@@ -79,7 +79,7 @@ export function updateNodes(ids: string[], patch: Partial<SceneNode> | ((n: Scen
         n.overrides = [...new Set([...(n.overrides ?? []), ...keys])];
       }
     }
-  });
+  }, ids);
 }
 
 // ---------- Selection ----------

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { DocumentData, FileMeta, ToolId } from '../model/types';
 import { finalize, newDocument, repairTree } from '../model/doc';
-import { mergeDocuments } from '../model/merge';
+import { applyPatch, diffSnapshots, documentFromSnapshot, snapshotDoc, type DocPatch, type DocSnapshot } from '../model/patch';
 import { storage } from './storage';
 
 export interface Viewport {
@@ -159,47 +159,36 @@ export const get = () => useStore.getState();
 export const set = (p: Partial<EditorState>) => useStore.setState(p);
 
 // ---------- History ----------
-// Each undo entry holds the document before (`data`) and after (`after`) one change. If the
-// document changed elsewhere in the meantime (another tab), undo applies only the reversal of
-// this change on top of the current document instead of rolling the other edits back too.
-interface Snap {
-  data: string;
-  after: string;
+// Each undo entry is a patch: the nodes, pages and document fields one change touched, before
+// and after (see model/patch.ts). Undo applies the reverse patch to the current document, so
+// edits made meanwhile in another window to other layers or properties are left alone.
+interface Entry {
+  patch: DocPatch;
   selection: string[];
   pageId: string;
 }
 const UNDO_LIMIT = 200;
-let undoStack: Snap[] = [];
-let redoStack: Snap[] = [];
-let txBase: { data: string; selection: string[]; pageId: string } | null = null;
+let undoStack: Entry[] = [];
+let redoStack: Entry[] = [];
+let txBase: { snap: DocSnapshot; selection: string[]; pageId: string } | null = null;
 let txDepth = 0;
-let lastCommitted = '';
-// The serialized document at a given store version; every document change bumps the version,
+// Snapshot of the document at a given store version; every document change bumps the version,
 // so consecutive transactions don't serialize the same unchanged document twice.
-let cached: { version: number; doc: DocumentData | null; data: string } = { version: -1, doc: null, data: '' };
+let cached: { version: number; doc: DocumentData | null; snap: DocSnapshot | null } = { version: -1, doc: null, snap: null };
 
-function serialize(doc: DocumentData): string {
+function snapshot(doc: DocumentData): DocSnapshot {
   const version = get().version;
-  if (cached.version === version && cached.doc === doc) return cached.data;
-  // `updatedAt` and saved versions aren't part of undo history.
-  let s = JSON.stringify({ ...doc, versions: [], updatedAt: 0 });
-  // Reuse the identical string from the previous commit so consecutive entries share memory.
-  if (s === lastCommitted) s = lastCommitted;
-  cached = { version, doc, data: s };
-  return s;
+  if (cached.snap && cached.version === version && cached.doc === doc) return cached.snap;
+  const snap = snapshotDoc(doc);
+  cached = { version, doc, snap };
+  return snap;
 }
 
-function load(data: string): DocumentData {
-  const doc = JSON.parse(data) as DocumentData;
-  doc.updatedAt = get().doc?.updatedAt ?? Date.now();
-  return doc;
-}
-
-function show(doc: DocumentData, selection: string[], pageId: string) {
-  doc.versions = get().doc!.versions;
+/** Re-derives layout after a history change and shows the result. */
+function show(selection: string[], pageId: string) {
+  const doc = get().doc!;
   finalize(doc);
   set({
-    doc,
     selection: selection.filter((id) => doc.nodes[id]),
     pageId: doc.pages.some((p) => p.id === pageId) ? pageId : doc.pages[0].id,
     editingTextId: null,
@@ -217,14 +206,13 @@ export function resetHistory() {
   redoStack = [];
   txBase = null;
   txDepth = 0;
-  lastCommitted = '';
   updateHistoryFlags();
 }
 
 export function beginTx() {
   if (txDepth++ === 0) {
     const { doc, selection, pageId } = get();
-    txBase = { data: serialize(doc!), selection, pageId };
+    txBase = { snap: snapshot(doc!), selection, pageId };
   }
 }
 
@@ -233,13 +221,13 @@ export function endTx() {
   if (--txDepth === 0 && txBase) {
     const base = txBase;
     txBase = null;
-    const now = serialize(get().doc!);
-    if (now !== base.data) {
-      undoStack.push({ ...base, after: now });
+    const doc = get().doc!;
+    const patch = diffSnapshots(base.snap, snapshot(doc));
+    if (patch) {
+      undoStack.push({ patch, selection: base.selection, pageId: base.pageId });
       if (undoStack.length > UNDO_LIMIT) undoStack.shift();
       redoStack = [];
-      lastCommitted = now;
-      afterCommit(base.data);
+      afterCommit(() => documentFromSnapshot(base.snap, doc));
     }
     updateHistoryFlags();
   }
@@ -251,7 +239,11 @@ export function cancelTx() {
   txDepth = 0;
   const base = txBase;
   txBase = null;
-  if (base) show(load(base.data), base.selection, base.pageId);
+  const doc = get().doc;
+  if (!base || !doc) return;
+  const patch = diffSnapshots(base.snap, snapshotDoc(doc));
+  if (patch) applyPatch(doc, patch, 'undo');
+  show(base.selection, base.pageId);
 }
 
 export function inTx() {
@@ -285,47 +277,41 @@ export function bump() {
   scheduleSave();
 }
 
-/** Replays one history step: `from` → `to`, rebased onto the current document if it moved on. */
-function step(entry: Snap, forward: boolean): Snap {
-  const cur = serialize(get().doc!);
-  const from = forward ? entry.data : entry.after;
-  const to = forward ? entry.after : entry.data;
-  const next = cur === from ? load(to) : mergeDocuments(load(from), load(to), load(cur));
-  const sel = get().selection;
-  const pageId = get().pageId;
-  show(next, forward ? sel : entry.selection, forward ? pageId : entry.pageId);
-  const now = serialize(get().doc!);
-  lastCommitted = now;
-  afterCommit(cur);
-  return forward ? { data: cur, after: now, selection: entry.selection, pageId: entry.pageId } : { data: now, after: cur, selection: sel, pageId };
-}
-
 export function undo() {
-  if (inTx()) return;
-  const s = undoStack.pop();
-  if (!s) return;
-  redoStack.push(step(s, false));
+  if (inTx() || !get().doc) return;
+  const e = undoStack.pop();
+  if (!e) return;
+  const redoEntry: Entry = { ...e, selection: get().selection, pageId: get().pageId };
+  applyPatch(get().doc!, e.patch, 'undo');
+  show(e.selection, e.pageId);
+  redoStack.push(redoEntry);
   updateHistoryFlags();
+  afterCommit();
 }
 
 export function redo() {
-  if (inTx()) return;
-  const s = redoStack.pop();
-  if (!s) return;
-  undoStack.push(step(s, true));
+  if (inTx() || !get().doc) return;
+  const e = redoStack.pop();
+  if (!e) return;
+  const undoEntry: Entry = { ...e, selection: get().selection, pageId: get().pageId };
+  applyPatch(get().doc!, e.patch, 'redo');
+  show(e.selection, e.pageId);
+  undoStack.push(undoEntry);
   updateHistoryFlags();
+  afterCommit();
 }
 
 // ---------- Persistence & sync hooks ----------
 let saveTimer: number | undefined;
 type Listener = () => void;
-type CommitListener = (base: string | null) => void;
+/** `base` rebuilds the document as it was before the change (only needed for merging). */
+type CommitListener = (base: (() => DocumentData) | null) => void;
 const commitListeners: CommitListener[] = [];
 /** Called after every local change, with the document as it was before the change (if known). */
 export function onCommit(l: CommitListener) {
   commitListeners.push(l);
 }
-export function afterCommit(base: string | null = null) {
+export function afterCommit(base: (() => DocumentData) | null = null) {
   for (const l of commitListeners) l(base);
 }
 

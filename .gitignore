@@ -21,3 +21,6 @@ npm-debug.log*
 # Environment files (the app doesn't need any; never commit secrets)
 .env
 .env.*
+
+# Local agent worktrees and settings
+.claude/

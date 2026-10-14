@@ -42,7 +42,7 @@ export function TextEditor() {
           t.characters = v;
           // Inside an instance, edited text is an override so the instance keeps it.
           if (t.refId) t.overrides = [...new Set([...(t.overrides ?? []), 'characters'])];
-        });
+        }, [id]);
       }}
       onKeyDown={(e) => {
         e.stopPropagation();

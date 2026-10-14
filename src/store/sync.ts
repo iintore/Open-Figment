@@ -112,7 +112,7 @@ export function initSync() {
       const remote = parseDoc(pendingRemote);
       const ours = get().doc;
       pendingRemote = null;
-      const baseDoc = base ? parseDoc(base) : null;
+      const baseDoc = base?.() ?? null;
       if (remote && ours && baseDoc) replaceDocument(mergeDocuments(baseDoc, ours, remote));
     }
     window.clearTimeout(docTimer);
