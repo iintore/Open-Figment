@@ -159,10 +159,12 @@ export function Seg<T extends string>(props: { value: T | null; options: { value
   );
 }
 
-function MenuList({ items, x, y, onClose, level = 0 }: { items: MenuItem[]; x: number; y: number; onClose: () => void; level?: number }) {
+function MenuList({ items, x, y, onClose, level = 0, onBack }: { items: MenuItem[]; x: number; y: number; onClose: () => void; level?: number; onBack?: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ x, y });
   const [open, setOpen] = useState<{ index: number; x: number; y: number } | null>(null);
+  // Keyboard highlight (arrow keys); the mouse highlight comes from hover styles.
+  const [kb, setKb] = useState(-1);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -172,22 +174,70 @@ function MenuList({ items, x, y, onClose, level = 0 }: { items: MenuItem[]; x: n
     if (nx + r.width > window.innerWidth - 8) nx = level ? x - r.width - 220 : window.innerWidth - r.width - 8;
     if (ny + r.height > window.innerHeight - 8) ny = Math.max(8, window.innerHeight - r.height - 8);
     setPos({ x: Math.max(8, nx), y: ny });
+    el.focus({ preventScroll: true });
   }, [x, y, level]);
+  const usable = (i: number) => !!items[i] && !items[i].separator && !items[i].disabled;
+  const move = (dir: 1 | -1) => {
+    for (let k = 1; k <= items.length; k++) {
+      const i = (((kb === -1 && dir === -1 ? 0 : kb) + dir * k) % items.length + items.length) % items.length;
+      if (usable(i)) return setKb(i);
+    }
+  };
+  const openSub = (i: number, el: HTMLElement) => {
+    const r = el.getBoundingClientRect();
+    setOpen({ index: i, x: r.right + 8, y: r.top - 8 });
+  };
+  const activate = (it: MenuItem, i: number, el?: HTMLElement | null) => {
+    if (it.disabled) return;
+    if (it.submenu) {
+      if (el) openSub(i, el);
+      return;
+    }
+    onClose();
+    it.action?.();
+  };
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (open) return; // the submenu has focus
+    e.stopPropagation();
+    if (e.key === 'ArrowDown') move(1);
+    else if (e.key === 'ArrowUp') move(-1);
+    else if ((e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') && usable(kb)) {
+      if (e.key === 'ArrowRight' && !items[kb].submenu) return;
+      activate(items[kb], kb, ref.current?.querySelector<HTMLElement>(`[data-index="${kb}"]`));
+    } else if (e.key === 'Escape') (onBack ?? onClose)();
+    else if (e.key === 'ArrowLeft' && onBack) onBack();
+    else return;
+    e.preventDefault();
+  };
   return (
     <>
-      <div className="menu" ref={ref} style={{ left: pos.x, top: pos.y }} onPointerDown={(e) => e.stopPropagation()} onContextMenu={(e) => e.preventDefault()}>
+      <div
+        className="menu"
+        role="menu"
+        tabIndex={-1}
+        ref={ref}
+        style={{ left: pos.x, top: pos.y }}
+        onKeyDown={onKeyDown}
+        onPointerDown={(e) => e.stopPropagation()}
+        onContextMenu={(e) => e.preventDefault()}
+      >
         {items.map((it, i) =>
           it.separator ? (
-            <div key={i} className="menu-sep" />
+            <div key={i} className="menu-sep" role="separator" />
           ) : (
             <div
               key={i}
-              className={'menu-item' + (it.disabled ? ' disabled' : '') + (open?.index === i ? ' hl' : '')}
+              data-index={i}
+              role={it.checked !== undefined ? 'menuitemcheckbox' : 'menuitem'}
+              aria-checked={it.checked !== undefined ? !!it.checked : undefined}
+              aria-disabled={it.disabled || undefined}
+              aria-haspopup={it.submenu ? 'menu' : undefined}
+              aria-expanded={it.submenu ? open?.index === i : undefined}
+              className={'menu-item' + (it.disabled ? ' disabled' : '') + (open?.index === i || kb === i ? ' hl' : '')}
               onPointerEnter={(e) => {
-                if (it.submenu && !it.disabled) {
-                  const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                  setOpen({ index: i, x: r.right + 8, y: r.top - 8 });
-                } else setOpen(null);
+                setKb(-1);
+                if (it.submenu && !it.disabled) openSub(i, e.currentTarget as HTMLElement);
+                else setOpen(null);
               }}
               onClick={() => {
                 if (it.disabled || it.submenu) return;
@@ -203,7 +253,19 @@ function MenuList({ items, x, y, onClose, level = 0 }: { items: MenuItem[]; x: n
           ),
         )}
       </div>
-      {open && items[open.index]?.submenu && <MenuList items={items[open.index].submenu!} x={open.x} y={open.y} onClose={onClose} level={level + 1} />}
+      {open && items[open.index]?.submenu && (
+        <MenuList
+          items={items[open.index].submenu!}
+          x={open.x}
+          y={open.y}
+          onClose={onClose}
+          level={level + 1}
+          onBack={() => {
+            setOpen(null);
+            ref.current?.focus({ preventScroll: true });
+          }}
+        />
+      )}
     </>
   );
 }

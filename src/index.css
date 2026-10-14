@@ -1027,6 +1027,9 @@ svg {
   box-shadow: var(--shadow-elevation);
   font: var(--text-body-medium);
 }
+.menu:focus {
+  outline: none;
+}
 .menu-item {
   display: flex;
   align-items: center;
