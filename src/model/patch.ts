@@ -1,5 +1,6 @@
 import type { DocumentData } from './types';
 import { repairTree } from './doc';
+import { same } from './merge';
 
 // Undo history stores patches rather than whole documents: only the nodes, pages and document
 // fields an edit changed, before and after. A drag on a 15k-node file then costs a few hundred
@@ -54,7 +55,6 @@ export function diffSnapshots(a: DocSnapshot, b: DocSnapshot): DocPatch | null {
 }
 
 type Obj = Record<string, unknown>;
-const same = (x: unknown, y: unknown) => x === y || JSON.stringify(x) === JSON.stringify(y);
 
 /**
  * Moves `target` from the `from` state to the `to` state, touching only the properties that

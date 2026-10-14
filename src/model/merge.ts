@@ -3,7 +3,8 @@ import { repairTree } from './doc';
 
 type Obj = Record<string, unknown>;
 
-const same = (a: unknown, b: unknown) => a === b || JSON.stringify(a) === JSON.stringify(b);
+/** Structural equality for JSON data (documents are plain JSON). */
+export const same = (a: unknown, b: unknown) => a === b || JSON.stringify(a) === JSON.stringify(b);
 
 /** Per-property merge: keys `ours` changed since `base` win, everything else comes from `theirs`. */
 function mergeObject(base: Obj | undefined, ours: Obj, theirs: Obj): Obj {

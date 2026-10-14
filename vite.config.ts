@@ -25,6 +25,16 @@ const contentSecurityPolicy = (): Plugin => ({
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), contentSecurityPolicy()],
+  build: {
+    rolldownOptions: {
+      output: {
+        // Keep React in its own long-cacheable chunk, separate from app code.
+        codeSplitting: {
+          groups: [{ name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/ }],
+        },
+      },
+    },
+  },
   test: {
     include: ['src/**/*.test.ts'],
     environment: 'node',
