@@ -23,6 +23,7 @@
     "lint": "oxlint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "e2e": "playwright test",
     "check": "npm run typecheck && npm run lint && npm test && vite build",
     "preview": "vite preview",
     "desktop": "vite build && electron .",
@@ -38,6 +39,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",

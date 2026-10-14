@@ -30,6 +30,20 @@ npm run check      # type-check, lint, unit tests and production build
   examples) and add a test.
 - Match the surrounding style: TypeScript strict mode, small modules, comments that explain *why*.
 
+## End-to-end tests
+
+Critical journeys (home screen, drawing, undo/redo, multi-tab sync, export) are covered by
+[Playwright](https://playwright.dev) tests in `e2e/`. They start their own Vite dev server on
+port 4173 (or reuse one already running there) and give every test empty browser storage.
+
+```bash
+npx playwright install chromium   # once, downloads the test browser
+npm run e2e                       # run the suite headless
+npx playwright test --ui          # debug interactively
+```
+
+CI runs them in a separate `e2e` job and uploads the HTML report when they fail.
+
 ## Project layout
 
 See the [architecture section of the README](README.md#architecture). In short: `src/model` is
