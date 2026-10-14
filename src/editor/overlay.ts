@@ -2,7 +2,8 @@ import type { DocumentData, SceneNode } from '../model/types';
 import { FRAME_LIKE } from '../model/types';
 import { absBounds, absMatrix, getPage, selectionBounds, ancestors, isAncestor } from '../model/doc';
 import { apply, mul, rectCorners, type Mat, type Pt, type Rect } from '../model/geometry';
-import { nodePath, vectorScaled } from '../render/paths';
+import { nodePath } from '../render/paths';
+import { vectorScaled } from '../model/shapes';
 import type { EditorState } from '../store/store';
 import { ix } from './interaction';
 

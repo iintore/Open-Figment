@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { afterCommit, bump, get, mutate, resetHistory, saveNow, set, showToast, useStore } from '../store/store';
-import { allCommands, K, saveVersion } from '../editor/menus';
+import { allCommands, saveVersion } from '../editor/menus';
+import { K } from '../editor/keys';
 import { Icon } from './icons';
 import type { DocumentData } from '../model/types';
 import { finalize } from '../model/doc';

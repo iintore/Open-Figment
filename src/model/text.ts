@@ -1,9 +1,15 @@
 import type { SceneNode } from './types';
 
+// Text is measured with a 2D canvas context. In the app it's created on first use; tests or
+// other hosts can supply their own with `setMeasureContext`.
 let measureCtx: CanvasRenderingContext2D | null = null;
 function ctx(): CanvasRenderingContext2D {
   if (!measureCtx) measureCtx = document.createElement('canvas').getContext('2d')!;
   return measureCtx;
+}
+export function setMeasureContext(c: CanvasRenderingContext2D) {
+  measureCtx = c;
+  cache.clear();
 }
 
 export function fontString(n: SceneNode, scale = 1): string {

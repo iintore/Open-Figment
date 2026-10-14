@@ -1,6 +1,6 @@
 import type { SceneNode, VectorPath, VectorPoint } from './types';
 import type { Pt } from './geometry';
-import { polygonPoints, vectorScaled } from '../render/paths';
+import { polygonPoints, vectorScaled } from './shapes';
 import { boundsOfPoints } from './geometry';
 
 /** Converts a primitive shape to editable vector points in its local space. */

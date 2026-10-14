@@ -3,7 +3,12 @@ import { IDENTITY, apply, boundsOfPoints, mul, rectCorners, rectsIntersect, type
 import { getPage, localMatrix } from '../model/doc';
 import { endTangent, isOpenPath, nodePath } from './paths';
 import { fontString, layoutText, letterSpacingPx } from '../model/text';
-import { getImage } from '../store/storage';
+
+// Decoded images come from the app's image store; the renderer only asks for them by id.
+let getImage: (id: string) => HTMLImageElement | undefined = () => undefined;
+export function setImageSource(source: (id: string) => HTMLImageElement | undefined) {
+  getImage = source;
+}
 
 export function hexToRgba(hex: string, a = 1): string {
   const h = hex.replace('#', '');

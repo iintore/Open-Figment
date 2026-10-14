@@ -2,7 +2,7 @@ import type { DocumentData, ExportSetting, Paint, SceneNode } from '../model/typ
 import { absBounds, absMatrix, localMatrix } from '../model/doc';
 import { invert, mul, type Mat } from '../model/geometry';
 import { renderNodesToCanvas, hexToRgba } from '../render/renderer';
-import { polygonPoints, radii, vectorScaled } from '../render/paths';
+import { polygonPoints, radii, vectorScaled } from '../model/shapes';
 import { applyCase, layoutText, letterSpacingPx } from '../model/text';
 import { imageDataUrl } from '../store/storage';
 

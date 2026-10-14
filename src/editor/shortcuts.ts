@@ -4,7 +4,8 @@ import { ix, requestRedraw } from './interaction';
 import { deleteVectorPoints, exitVectorEdit, finishPen } from './tools';
 import { zoomIn, zoomOut, zoomTo100, zoomToFit, zoomToSelection } from './viewport';
 import { copyAsPNG, exportSelection } from './exporter';
-import { isMac, saveVersion, startPresenting, toggleRulers } from './menus';
+import { saveVersion, startPresenting, toggleRulers } from './menus';
+import { isMac } from './keys';
 import { savePref, showToast } from '../store/store';
 import { openRail } from '../store/ui';
 

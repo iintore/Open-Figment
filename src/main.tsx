@@ -7,11 +7,13 @@ import { installShortcuts } from './editor/shortcuts';
 import { installDesktopIntegration } from './desktop';
 import { initSync } from './store/sync';
 import { demoDocument } from './store/seed';
-import { renderNodesToCanvas } from './render/renderer';
+import { renderNodesToCanvas, setImageSource } from './render/renderer';
+import { getImage } from './store/storage';
 import { getPage, absBounds, finalize } from './model/doc';
 import { clearTextCache, fontString } from './model/text';
 import { unionRects } from './model/geometry';
 
+setImageSource(getImage);
 setThumbnailRenderer((doc) => {
   const page = getPage(doc, doc.pages[0].id);
   const ids = (page?.children ?? []).filter((id) => doc.nodes[id]?.visible);

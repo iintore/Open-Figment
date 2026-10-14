@@ -13,6 +13,7 @@ import { Monkey } from './Monkey';
 import { openMenuAt, openRail } from '../store/ui';
 import { newSolid } from './color';
 import { useThrottledVersion } from './useThrottledVersion';
+import { SHORTCUTS } from '../editor/keys';
 
 function InlineEdit({ value, onDone }: { value: string; onDone: (v: string | null) => void }) {
   const ref = useRef<HTMLInputElement>(null);
@@ -38,10 +39,10 @@ function InlineEdit({ value, onDone }: { value: string; onDone: (v: string | nul
 // ---------------------------------------------------------------- Rail
 
 const RAIL: { id: EditorState['railTab']; label: string; icon: () => ReactNode; shortcut: string }[] = [
-  { id: 'FILE', label: 'File', icon: Icon.file, shortcut: '⌥1' },
-  { id: 'AGENTS', label: 'Agents', icon: Icon.sparkle, shortcut: '⌘↵' },
-  { id: 'ASSETS', label: 'Assets', icon: Icon.assets, shortcut: '⌥2' },
-  { id: 'TOOLS', label: 'Tools', icon: Icon.tools, shortcut: '⌥3' },
+  { id: 'FILE', label: 'File', icon: Icon.file, shortcut: SHORTCUTS.file },
+  { id: 'AGENTS', label: 'Agents', icon: Icon.sparkle, shortcut: SHORTCUTS.agents },
+  { id: 'ASSETS', label: 'Assets', icon: Icon.assets, shortcut: SHORTCUTS.assets },
+  { id: 'TOOLS', label: 'Tools', icon: Icon.tools, shortcut: SHORTCUTS.tools },
 ];
 
 
@@ -609,7 +610,7 @@ function AssetsPanel() {
           </>
         ) : (
           <>
-            {!components.length && <div className="empty-hint">{q ? 'No matching components.' : 'Create components with ⌥⌘K. They appear here so you can drag instances onto the canvas.'}</div>}
+            {!components.length && <div className="empty-hint">{q ? 'No matching components.' : `Create components with ${SHORTCUTS.createComponent}. They appear here so you can drag instances onto the canvas.`}</div>}
             <div className="asset-grid">
               {components.map((c) => (
                 <div key={c.id}>

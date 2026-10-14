@@ -5,6 +5,7 @@ import { Icon } from '../icons';
 import { selectionBounds } from '../../model/doc';
 import { openMenuAt } from '../../store/ui';
 import { mixed, type Nodes } from './shared';
+import { SHORTCUTS } from '../../editor/keys';
 
 export function PositionSection({ nodes }: { nodes: Nodes }) {
   const doc = useStore((s) => s.doc)!;
@@ -54,9 +55,9 @@ export function PositionSection({ nodes }: { nodes: Nodes }) {
           title="More alignment options"
           onClick={(e) =>
             openMenuAt(e.currentTarget, [
-              { label: 'Distribute horizontal spacing', shortcut: '⌃⌥H', action: () => A.distribute('h'), disabled: nodes.length < 3 },
-              { label: 'Distribute vertical spacing', shortcut: '⌃⌥V', action: () => A.distribute('v'), disabled: nodes.length < 3 },
-              { label: 'Tidy up', shortcut: '⌃⌥T', action: A.tidyUp, disabled: nodes.length < 2 },
+              { label: 'Distribute horizontal spacing', shortcut: SHORTCUTS.distributeHorizontalSpacing, action: () => A.distribute('h'), disabled: nodes.length < 3 },
+              { label: 'Distribute vertical spacing', shortcut: SHORTCUTS.distributeVerticalSpacing, action: () => A.distribute('v'), disabled: nodes.length < 3 },
+              { label: 'Tidy up', shortcut: SHORTCUTS.tidyUp, action: A.tidyUp, disabled: nodes.length < 2 },
             ])
           }
         >

@@ -10,6 +10,7 @@ import { zoomAt, zoomIn, zoomOut, zoomTo100, zoomToFit, zoomToSelection, setView
 import * as A from '../editor/actions';
 import { openMenuAt } from '../store/ui';
 import { useThrottledVersion } from './useThrottledVersion';
+import { SHORTCUTS } from '../editor/keys';
 
 const TRIGGERS: { value: Interaction['trigger']; label: string }[] = [
   { value: 'ON_CLICK', label: 'On click' },
@@ -329,7 +330,7 @@ export function RightPanel() {
             title="Presentation options"
             onClick={(e) =>
               openMenuAt(e.currentTarget, [
-                { label: 'Present', shortcut: '⌥⌘↵', action: startPresenting },
+                { label: 'Present', shortcut: SHORTCUTS.present, action: startPresenting },
                 { label: 'Prototype settings', action: () => set({ rightTab: 'PROTOTYPE' }) },
               ])
             }
@@ -369,13 +370,13 @@ export function RightPanel() {
           className="zoom-btn"
           onClick={(e) =>
             openMenuAt(e.currentTarget, [
-              { label: 'Zoom in', shortcut: '⌘+', action: zoomIn },
-              { label: 'Zoom out', shortcut: '⌘-', action: zoomOut },
-              { label: 'Zoom to fit', shortcut: '⇧1', action: zoomToFit },
-              { label: 'Zoom to selection', shortcut: '⇧2', action: zoomToSelection },
+              { label: 'Zoom in', shortcut: SHORTCUTS.zoomIn, action: zoomIn },
+              { label: 'Zoom out', shortcut: SHORTCUTS.zoomOut, action: zoomOut },
+              { label: 'Zoom to fit', shortcut: SHORTCUTS.zoomToFit, action: zoomToFit },
+              { label: 'Zoom to selection', shortcut: SHORTCUTS.zoomToSelection, action: zoomToSelection },
               { separator: true },
               { label: 'Zoom to 50%', action: () => zoomAtCenter(0.5) },
-              { label: 'Zoom to 100%', shortcut: '⇧0', action: zoomTo100 },
+              { label: 'Zoom to 100%', shortcut: SHORTCUTS.zoomTo100Percent, action: zoomTo100 },
               { label: 'Zoom to 200%', action: () => zoomAtCenter(2) },
               { separator: true },
               { label: 'Pixel grid', checked: get().pixelGrid, action: () => set({ pixelGrid: !get().pixelGrid }) },

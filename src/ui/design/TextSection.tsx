@@ -7,6 +7,7 @@ import { uid } from '../../model/doc';
 import { FONT_FAMILIES, WEIGHTS } from '../fonts';
 import { openMenuAt } from '../../store/ui';
 import { mixed, num, type Nodes } from './shared';
+import { SHORTCUTS } from '../../editor/keys';
 
 export function TextSection({ nodes }: { nodes: Nodes }) {
   const doc = useStore((s) => s.doc)!;
@@ -113,7 +114,7 @@ export function TextSection({ nodes }: { nodes: Nodes }) {
               { label: 'Fixed size', checked: n.textAutoResize === 'NONE', action: () => A.updateNodes(ids, { textAutoResize: 'NONE' }) },
               { separator: true },
               { label: 'No decoration', checked: !n.textDecoration || n.textDecoration === 'NONE', action: () => A.updateNodes(ids, { textDecoration: 'NONE' }) },
-              { label: 'Underline', shortcut: '⌘U', checked: n.textDecoration === 'UNDERLINE', action: () => A.updateNodes(ids, { textDecoration: 'UNDERLINE' }) },
+              { label: 'Underline', shortcut: SHORTCUTS.underline, checked: n.textDecoration === 'UNDERLINE', action: () => A.updateNodes(ids, { textDecoration: 'UNDERLINE' }) },
               { label: 'Strikethrough', checked: n.textDecoration === 'STRIKETHROUGH', action: () => A.updateNodes(ids, { textDecoration: 'STRIKETHROUGH' }) },
               { separator: true },
               { label: 'As typed', checked: !n.textCase || n.textCase === 'ORIGINAL', action: () => A.updateNodes(ids, { textCase: 'ORIGINAL' }) },

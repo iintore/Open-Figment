@@ -29,7 +29,7 @@ import { apply, invert, mul, rectsIntersect, rotate, translate, type Mat, type P
 import type { DocumentData, NodeType, SceneNode } from '../model/types';
 import { createInstance, duplicateSelection, pasteImageFile, select, rotateAround } from './actions';
 import { enterVectorEdit, exitVectorEdit, finishPen, finishPencil, normalizeVectorNode } from './tools';
-import { vectorScaled } from '../render/paths';
+import { vectorScaled } from '../model/shapes';
 import { TextEditor } from './TextEditor';
 import { CanvasDomOverlay } from './CanvasDomOverlay';
 import { buildCanvasMenu } from './menus';

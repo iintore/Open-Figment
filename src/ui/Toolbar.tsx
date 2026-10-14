@@ -5,8 +5,8 @@ import { setTool, booleanOp } from '../editor/actions';
 import { finishPen } from '../editor/tools';
 import { ix } from '../editor/interaction';
 import { Icon } from './icons';
-import { K } from '../editor/menus';
 import { openRail } from '../store/ui';
+import { SHORTCUTS } from '../editor/keys';
 
 interface ToolDef {
   id: ToolId;
@@ -19,53 +19,53 @@ const DESIGN_GROUPS: { key: string; tools: ToolDef[] }[] = [
   {
     key: 'move',
     tools: [
-      { id: 'MOVE', label: 'Move', shortcut: 'V', icon: Icon.move },
-      { id: 'HAND', label: 'Hand tool', shortcut: 'H', icon: Icon.hand },
-      { id: 'SCALE', label: 'Scale', shortcut: 'K', icon: Icon.scale },
+      { id: 'MOVE', label: 'Move', shortcut: SHORTCUTS.move, icon: Icon.move },
+      { id: 'HAND', label: 'Hand tool', shortcut: SHORTCUTS.handTool, icon: Icon.hand },
+      { id: 'SCALE', label: 'Scale', shortcut: SHORTCUTS.scale, icon: Icon.scale },
     ],
   },
   {
     key: 'frame',
     tools: [
-      { id: 'FRAME', label: 'Frame', shortcut: 'F', icon: Icon.frame },
-      { id: 'SECTION', label: 'Section', shortcut: `${K.shift}S`, icon: Icon.section },
+      { id: 'FRAME', label: 'Frame', shortcut: SHORTCUTS.frame, icon: Icon.frame },
+      { id: 'SECTION', label: 'Section', shortcut: SHORTCUTS.section, icon: Icon.section },
     ],
   },
   {
     key: 'shape',
     tools: [
-      { id: 'RECTANGLE', label: 'Rectangle', shortcut: 'R', icon: Icon.rectangle },
-      { id: 'LINE', label: 'Line', shortcut: 'L', icon: Icon.line },
-      { id: 'ARROW', label: 'Arrow', shortcut: `${K.shift}L`, icon: Icon.arrow },
-      { id: 'ELLIPSE', label: 'Ellipse', shortcut: 'O', icon: Icon.ellipse },
+      { id: 'RECTANGLE', label: 'Rectangle', shortcut: SHORTCUTS.rectangle, icon: Icon.rectangle },
+      { id: 'LINE', label: 'Line', shortcut: SHORTCUTS.line, icon: Icon.line },
+      { id: 'ARROW', label: 'Arrow', shortcut: SHORTCUTS.arrow, icon: Icon.arrow },
+      { id: 'ELLIPSE', label: 'Ellipse', shortcut: SHORTCUTS.ellipse, icon: Icon.ellipse },
       { id: 'POLYGON', label: 'Polygon', shortcut: '', icon: Icon.polygon },
       { id: 'STAR', label: 'Star', shortcut: '', icon: Icon.star },
-      { id: 'IMAGE', label: 'Image/video…', shortcut: `${K.shift}${K.cmd}K`, icon: Icon.image },
+      { id: 'IMAGE', label: 'Image/video…', shortcut: SHORTCUTS.imageVideo, icon: Icon.image },
     ],
   },
   {
     key: 'pen',
     tools: [
-      { id: 'PEN', label: 'Pen', shortcut: 'P', icon: Icon.pen },
-      { id: 'PENCIL', label: 'Pencil', shortcut: `${K.shift}P`, icon: Icon.pencil },
+      { id: 'PEN', label: 'Pen', shortcut: SHORTCUTS.pen, icon: Icon.pen },
+      { id: 'PENCIL', label: 'Pencil', shortcut: SHORTCUTS.pencil, icon: Icon.pencil },
     ],
   },
   {
     key: 'text',
-    tools: [{ id: 'TEXT', label: 'Text', shortcut: 'T', icon: Icon.text }],
+    tools: [{ id: 'TEXT', label: 'Text', shortcut: SHORTCUTS.text, icon: Icon.text }],
   },
 ];
 
 const DRAW_GROUPS: { key: string; tools: ToolDef[] }[] = [
-  { key: 'move', tools: [{ id: 'MOVE', label: 'Move', shortcut: 'V', icon: Icon.move }] },
-  { key: 'pencil', tools: [{ id: 'PENCIL', label: 'Pencil', shortcut: `${K.shift}P`, icon: Icon.pencil }] },
-  { key: 'pen', tools: [{ id: 'PEN', label: 'Pen', shortcut: 'P', icon: Icon.pen }] },
+  { key: 'move', tools: [{ id: 'MOVE', label: 'Move', shortcut: SHORTCUTS.move, icon: Icon.move }] },
+  { key: 'pencil', tools: [{ id: 'PENCIL', label: 'Pencil', shortcut: SHORTCUTS.pencil, icon: Icon.pencil }] },
+  { key: 'pen', tools: [{ id: 'PEN', label: 'Pen', shortcut: SHORTCUTS.pen, icon: Icon.pen }] },
   {
     key: 'shape',
     tools: [
-      { id: 'ELLIPSE', label: 'Ellipse', shortcut: 'O', icon: Icon.ellipse },
-      { id: 'RECTANGLE', label: 'Rectangle', shortcut: 'R', icon: Icon.rectangle },
-      { id: 'LINE', label: 'Line', shortcut: 'L', icon: Icon.line },
+      { id: 'ELLIPSE', label: 'Ellipse', shortcut: SHORTCUTS.ellipse, icon: Icon.ellipse },
+      { id: 'RECTANGLE', label: 'Rectangle', shortcut: SHORTCUTS.rectangle, icon: Icon.rectangle },
+      { id: 'LINE', label: 'Line', shortcut: SHORTCUTS.line, icon: Icon.line },
     ],
   },
   { key: 'eraser', tools: [{ id: 'ERASER', label: 'Eraser', shortcut: '', icon: Icon.trash }] },
@@ -124,7 +124,7 @@ export function Toolbar() {
                     const items: MenuItem[] =
                       g.key === 'text'
                         ? [
-                            { label: 'Text', shortcut: 'T', checked: tool === 'TEXT', action: () => choose('TEXT') },
+                            { label: 'Text', shortcut: SHORTCUTS.text, checked: tool === 'TEXT', action: () => choose('TEXT') },
                             { separator: true },
                             { label: 'Text styles…', action: () => openRail('ASSETS') },
                           ]
@@ -149,7 +149,7 @@ export function Toolbar() {
         {mode === 'DESIGN' ? (
           <>
             <div className={'tool' + (tool === 'COMMENT' ? ' active' : '')}>
-              <button className="tool-main" aria-label="Comment" aria-pressed={tool === 'COMMENT'} onPointerEnter={(e) => showTip(e, 'Comment  C')} onPointerLeave={() => setTip(null)} onClick={() => choose('COMMENT')}>
+              <button className="tool-main" aria-label="Comment" aria-pressed={tool === 'COMMENT'} onPointerEnter={(e) => showTip(e, `Comment  ${SHORTCUTS.comment}`)} onPointerLeave={() => setTip(null)} onClick={() => choose('COMMENT')}>
                 <Icon.comment />
               </button>
             </div>
@@ -162,8 +162,8 @@ export function Toolbar() {
                 onPointerLeave={() => setTip(null)}
                 onClick={(e) =>
                   menuAbove(e.currentTarget, [
-                    { label: 'Browse assets', shortcut: '⌥2', action: () => openRail('ASSETS') },
-                    { label: 'Place image…', shortcut: `${K.shift}${K.cmd}K`, action: () => choose('IMAGE') },
+                    { label: 'Browse assets', shortcut: SHORTCUTS.browseAssets, action: () => openRail('ASSETS') },
+                    { label: 'Place image…', shortcut: SHORTCUTS.placeImage, action: () => choose('IMAGE') },
                     { separator: true },
                     { label: 'Union selection', action: () => booleanOp('UNION'), disabled: selection.length < 2 },
                     { label: 'Subtract selection', action: () => booleanOp('SUBTRACT'), disabled: selection.length < 2 },
@@ -212,7 +212,7 @@ export function Toolbar() {
           <button className="disabled" aria-label="Motion mode (not available)" aria-disabled="true" onPointerEnter={(e) => showTip(e, 'Motion (Beta) — not available in this build')} onPointerLeave={() => setTip(null)}>
             <Icon.motion />
           </button>
-          <button className={devMode ? 'on dev' : ''} aria-label="Dev Mode" aria-pressed={devMode} onPointerEnter={(e) => showTip(e, `Dev Mode  ${K.shift}D`)} onPointerLeave={() => setTip(null)} onClick={() => set({ devMode: !devMode })}>
+          <button className={devMode ? 'on dev' : ''} aria-label="Dev Mode" aria-pressed={devMode} onPointerEnter={(e) => showTip(e, `Dev Mode  ${SHORTCUTS.devMode}`)} onPointerLeave={() => setTip(null)} onClick={() => set({ devMode: !devMode })}>
             <Icon.code />
           </button>
         </div>

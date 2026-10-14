@@ -9,6 +9,7 @@ import { canvasSize, screenToWorld, zoomToRect } from '../../editor/viewport';
 import { openMenuAt } from '../../store/ui';
 import { FRAME_PRESETS } from '../framePresets';
 import type { Nodes } from './shared';
+import { SHORTCUTS } from '../../editor/keys';
 
 function createPresetFrame(name: string, w: number, h: number) {
   const s = get();
@@ -77,7 +78,7 @@ export function ComponentHeader({ nodes }: { nodes: Nodes }) {
               openMenuAt(e.currentTarget, [
                 { label: 'Go to main component', action: A.goToMainComponent, disabled: !main },
                 { label: 'Reset all changes', action: A.resetOverrides },
-                { label: 'Detach instance', shortcut: '⌥⌘B', action: A.detachInstance },
+                { label: 'Detach instance', shortcut: SHORTCUTS.detachInstance, action: A.detachInstance },
               ])
             }
           >
@@ -147,8 +148,8 @@ export function TypeHeader({ nodes }: { nodes: Nodes }) {
   const convertItems: MenuItem[] = [];
   if (nodes.length === 1 && n.type === 'GROUP') convertItems.push({ label: 'Convert to frame', action: A.frameSelection });
   if (nodes.length === 1 && n.type === 'FRAME') convertItems.push({ label: 'Convert to group', action: () => { A.groupSelection(); } }, { label: 'Remove frame', action: A.ungroupSelection });
-  if (n.type !== 'COMPONENT' && n.type !== 'INSTANCE') convertItems.push({ label: 'Create component', shortcut: '⌥⌘K', action: A.createComponent });
-  if (nodes.length > 1) convertItems.push({ label: 'Group selection', shortcut: '⌘G', action: () => A.groupSelection() }, { label: 'Frame selection', shortcut: '⌥⌘G', action: A.frameSelection });
+  if (n.type !== 'COMPONENT' && n.type !== 'INSTANCE') convertItems.push({ label: 'Create component', shortcut: SHORTCUTS.createComponent, action: A.createComponent });
+  if (nodes.length > 1) convertItems.push({ label: 'Group selection', shortcut: SHORTCUTS.groupSelection, action: () => A.groupSelection() }, { label: 'Frame selection', shortcut: SHORTCUTS.frameSelection, action: A.frameSelection });
   return (
     <div className="type-header">
       <button className="type-btn" onClick={(e) => convertItems.length && openMenuAt(e.currentTarget, convertItems)}>
