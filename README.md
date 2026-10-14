@@ -50,6 +50,7 @@ Then open <http://localhost:5173>. A sample file is created on first run.
 | `npm run dev` | Start the development server with hot reload |
 | `npm run build` | Type-check and build the web app into `dist/` |
 | `npm test` | Run the unit tests (Vitest) |
+| `npm run e2e` | Run the end-to-end tests in Chromium (Playwright; first run `npx playwright install chromium`) |
 | `npm run lint` | Lint with oxlint |
 | `npm run check` | Type-check, lint, test and build (what CI runs) |
 | `npm run desktop` | Build and open the app in Electron |
@@ -76,22 +77,32 @@ bundled, so everything works offline.
 
 ```
 src/
-  model/    Document model: nodes in a flat map, transforms, auto layout, instances,
-            text layout, validation of untrusted input, three-way merge
-  render/   Canvas 2D renderer (paths, paints, effects, masks, booleans)
-  editor/   Pointer and keyboard interaction, hit testing, overlay, commands, export
-  store/    App state (zustand), undo/redo, IndexedDB persistence, multi-window sync
-  ui/       React panels and controls
-electron/   Desktop shell (main process and preload bridge)
+  model/     Document model: nodes in a flat map, transforms, shapes, auto layout,
+             instances, text layout, validation of untrusted input, merge, undo patches
+  render/    Canvas 2D renderer (paths, paints, effects, masks, booleans)
+  editor/    Canvas events and gestures, hit testing, overlay, commands, shortcuts
+             (keys.ts holds every shortcut label), menus, export
+  store/     App state (zustand), undo/redo, IndexedDB persistence, multi-window sync
+  ui/        React panels and controls; ui/design/ holds the properties panel sections
+electron/    Desktop shell (main process and preload bridge)
+e2e/         End-to-end tests (Playwright)
 ```
+
+Dependencies point one way: `model` depends on nothing else, `render` and `store` only on
+`model`, `editor` on `model`, `render` and `store`, and `ui` on everything. The renderer receives images through
+`setImageSource`, so it doesn't depend on storage.
 
 How an edit flows: input in `src/editor` calls `mutate(fn)` (or `beginTx()`/`endTx()` around a
 gesture). The change is applied to the document, `finalize()` updates derived state (instance
 contents, text sizes, group bounds, auto layout), and then the canvas redraws, the file is saved
-and other windows receive the change. Every transaction is one undo step.
+and other windows receive the change. Edits that pass the ids they touch (dragging, property
+changes, typing) only update the instances and top-level layers they affect. Every transaction
+is one undo step, stored as a patch of just the changed nodes and properties.
 
-Tests live next to the code as `*.test.ts`. The document model, merge, validation and history
-are covered.
+Unit tests live next to the code as `*.test.ts` (document model, merge, undo patches,
+validation, history, export escaping, shortcut labels, number-field maths). End-to-end tests
+in `e2e/` cover the main journeys: opening files, drawing with undo/redo, deleting, exporting,
+renaming/starring/trashing files, live sync between two tabs, and upgrading old saved files.
 
 ## Known limitations
 
