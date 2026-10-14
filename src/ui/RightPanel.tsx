@@ -9,6 +9,7 @@ import { startPresenting } from '../editor/menus';
 import { zoomAt, zoomIn, zoomOut, zoomTo100, zoomToFit, zoomToSelection, setViewport, canvasSize } from '../editor/viewport';
 import * as A from '../editor/actions';
 import { openMenuAt } from '../store/ui';
+import { useThrottledVersion } from './useThrottledVersion';
 
 const TRIGGERS: { value: Interaction['trigger']; label: string }[] = [
   { value: 'ON_CLICK', label: 'On click' },
@@ -37,7 +38,7 @@ function setInteractions(id: string, list: Interaction[]) {
 
 function PrototypePanel() {
   const doc = useStore((s) => s.doc)!;
-  useStore((s) => s.version);
+  useThrottledVersion();
   const selection = useStore((s) => s.selection);
   const pageId = useStore((s) => s.pageId);
   const frames = allTopLevelFrames(doc, pageId);
@@ -177,7 +178,7 @@ function PrototypePanel() {
 
 function InspectPanel() {
   const doc = useStore((s) => s.doc)!;
-  useStore((s) => s.version);
+  useThrottledVersion();
   const selection = useStore((s) => s.selection);
   const n = doc.nodes[selection[0]];
   if (!n)
@@ -240,7 +241,7 @@ function InspectPanel() {
 
 function CommentsPanel() {
   const doc = useStore((s) => s.doc)!;
-  useStore((s) => s.version);
+  useThrottledVersion();
   const pageId = useStore((s) => s.pageId);
   const threads = doc.comments.filter((c) => c.messages.length);
   return (

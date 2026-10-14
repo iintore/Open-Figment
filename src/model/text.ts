@@ -46,6 +46,7 @@ export interface TextLayout {
 }
 
 const cache = new Map<string, TextLayout>();
+const CACHE_LIMIT = 20000;
 
 function measure(c: CanvasRenderingContext2D, s: string, ls: number): number {
   return c.measureText(s).width + ls * [...s].length;
@@ -56,7 +57,12 @@ export function layoutText(n: SceneNode): TextLayout {
   const mode = n.textAutoResize ?? 'WIDTH_AND_HEIGHT';
   const key = [text, fontString(n), n.lineHeight, n.letterSpacing, mode, mode === 'WIDTH_AND_HEIGHT' ? 0 : Math.round(n.w * 100), n.paragraphSpacing].join('|');
   const hit = cache.get(key);
-  if (hit) return hit;
+  if (hit) {
+    // Keep recently used layouts at the end so eviction drops the oldest ones.
+    cache.delete(key);
+    cache.set(key, hit);
+    return hit;
+  }
   const c = ctx();
   c.font = fontString(n);
   const ls = letterSpacingPx(n);
@@ -96,7 +102,15 @@ export function layoutText(n: SceneNode): TextLayout {
   const width = mode === 'WIDTH_AND_HEIGHT' ? Math.max(1, ...lines.map((l) => l.width)) : n.w;
   const height = Math.max(lh, lines.length * lh + (paragraphs.length - 1) * (n.paragraphSpacing ?? 0));
   const result = { lines, lineHeight: lh, width: Math.ceil(width * 100) / 100, height: Math.ceil(height * 100) / 100 };
-  if (cache.size > 2000) cache.clear();
+  if (cache.size >= CACHE_LIMIT) {
+    // Evict the least recently used quarter instead of everything, so large files don't
+    // re-measure all their text on every edit.
+    let drop = CACHE_LIMIT / 4;
+    for (const k of cache.keys()) {
+      if (drop-- <= 0) break;
+      cache.delete(k);
+    }
+  }
   cache.set(key, result);
   return result;
 }

@@ -32,30 +32,37 @@ function pointInNode(n: SceneNode, local: Pt, zoom: number): boolean {
 export function hitChain(doc: DocumentData, pageId: string, p: Pt, zoom: number, opts: { includeLocked?: boolean } = {}): SceneNode[] {
   const page = getPage(doc, pageId);
   if (!page) return [];
-  const visit = (ids: string[], parentM: Mat, chain: SceneNode[]): SceneNode[] | null => {
+  // One shared chain, pushed and popped while walking, copied only for the result (hover runs
+  // this on every pointer move, so per-node allocations add up on large files).
+  const chain: SceneNode[] = [];
+  const visit = (ids: string[], parentM: Mat): SceneNode[] | null => {
     for (let i = ids.length - 1; i >= 0; i--) {
       const n = doc.nodes[ids[i]];
       if (!n || !n.visible || (n.locked && !opts.includeLocked)) continue;
       const m = mul(parentM, localMatrix(n));
       const local = apply(invert(m), p);
       const inBox = local.x >= 0 && local.y >= 0 && local.x <= n.w && local.y <= n.h;
-      const next = [...chain, n];
-      if (n.children && n.type !== 'BOOLEAN') {
-        if (n.clipContent && !inBox) continue;
-        const r = visit(n.children, m, next);
-        if (r) return r;
-        if (n.type !== 'GROUP' && inBox) return next;
-        continue;
+      chain.push(n);
+      try {
+        if (n.children && n.type !== 'BOOLEAN') {
+          if (n.clipContent && !inBox) continue;
+          const r = visit(n.children, m);
+          if (r) return r;
+          if (n.type !== 'GROUP' && inBox) return [...chain];
+          continue;
+        }
+        if (n.type === 'BOOLEAN') {
+          if (inBox && (n.children ?? []).some((c) => doc.nodes[c] && pointInNode(doc.nodes[c], apply(invert(localMatrix(doc.nodes[c])), local), zoom))) return [...chain];
+          continue;
+        }
+        if (pointInNode(n, local, zoom)) return [...chain];
+      } finally {
+        chain.pop();
       }
-      if (n.type === 'BOOLEAN') {
-        if (inBox && (n.children ?? []).some((c) => doc.nodes[c] && pointInNode(doc.nodes[c], apply(invert(localMatrix(doc.nodes[c])), local), zoom))) return next;
-        continue;
-      }
-      if (pointInNode(n, local, zoom)) return next;
     }
     return null;
   };
-  return visit(page.children, IDENTITY, []) ?? [];
+  return visit(page.children, IDENTITY) ?? [];
 }
 
 /** Applies the selection rules (top-level frames, groups, deep select) to a hit chain. */

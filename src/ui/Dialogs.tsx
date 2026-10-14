@@ -5,6 +5,7 @@ import { Icon } from './icons';
 import type { DocumentData } from '../model/types';
 import { finalize } from '../model/doc';
 import { validateDocument } from '../model/validate';
+import { useThrottledVersion } from './useThrottledVersion';
 
 export function QuickActions() {
   const open = useStore((s) => s.quickActions);
@@ -202,7 +203,7 @@ export function ShortcutsDialog() {
 export function VersionHistory() {
   const open = useStore((s) => s.versionsOpen);
   const doc = useStore((s) => s.doc);
-  useStore((s) => s.version);
+  useThrottledVersion();
   if (!open || !doc) return null;
   const restore = (data: string) => {
     if (!confirm('Restore this version? Current changes are saved as a new version first.')) return;

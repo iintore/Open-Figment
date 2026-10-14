@@ -644,7 +644,9 @@ export function Canvas() {
           ix.marquee = r;
           const hits = marqueeSelect(s.doc, s.pageId, r);
           const sel = drag.shift ? [...new Set([...drag.base, ...hits])] : hits;
-          set({ selection: sel });
+          // Only update when the hit set changes, so panels don't re-render on every move.
+          const cur = s.selection;
+          if (sel.length !== cur.length || sel.some((id, i) => id !== cur[i])) set({ selection: sel });
           return;
         }
         case 'move':
@@ -834,8 +836,9 @@ export function Canvas() {
       const scaleTool = dg.scaleTool;
       const touched = dg.ids.flatMap((id) => [id, s.doc!.nodes[id]?.parentId ?? '']);
       mutate((d) => {
-        // Restore originals.
-        for (const [id, o] of Object.entries(dg.orig)) if (d.nodes[id]) Object.assign(d.nodes[id], structuredClone(o));
+        // Restore originals. A shallow copy is enough: resizing only ever assigns new values
+        // (numbers, or fresh arrays/objects in scaleProps), it never edits nested ones in place.
+        for (const [id, o] of Object.entries(dg.orig)) if (d.nodes[id]) Object.assign(d.nodes[id], o);
         if (single) {
           const n = d.nodes[single.id];
           const o = single;

@@ -3,8 +3,9 @@ import type { DocumentData, FileMeta } from '../model/types';
 const DB_NAME = 'figment';
 // Files saved before the rename live in this database; they are copied over once on first open.
 const LEGACY_DB_NAME = 'figma-clone';
-const VERSION = 1;
-const STORES = ['meta', 'docs', 'images'] as const;
+// v2 keeps each file's saved versions in their own store, so autosave doesn't rewrite them.
+const VERSION = 2;
+const STORES = ['meta', 'docs', 'images', 'versions'] as const;
 let dbp: Promise<IDBDatabase> | null = null;
 
 function openDb(name: string, onCreate?: () => void): Promise<IDBDatabase> {
@@ -15,6 +16,7 @@ function openDb(name: string, onCreate?: () => void): Promise<IDBDatabase> {
       if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta', { keyPath: 'id' });
       if (!d.objectStoreNames.contains('docs')) d.createObjectStore('docs', { keyPath: 'id' });
       if (!d.objectStoreNames.contains('images')) d.createObjectStore('images');
+      if (!d.objectStoreNames.contains('versions')) d.createObjectStore('versions');
       if (e.oldVersion === 0) onCreate?.();
     };
     req.onsuccess = () => resolve(req.result);
@@ -34,7 +36,7 @@ function run<T>(t: IDBTransaction, req: IDBRequest<T>): Promise<T> {
 async function migrateLegacy(target: IDBDatabase) {
   const known = (await indexedDB.databases?.().catch(() => [])) ?? [];
   if (!known.some((d) => d.name === LEGACY_DB_NAME)) return;
-  const legacy = await openDb(LEGACY_DB_NAME);
+  const legacy = await openExisting(LEGACY_DB_NAME);
   for (const name of STORES) {
     if (!legacy.objectStoreNames.contains(name)) continue;
     const rt = legacy.transaction(name, 'readonly');
@@ -46,6 +48,54 @@ async function migrateLegacy(target: IDBDatabase) {
     await done;
   }
   legacy.close();
+  markMigrated();
+  indexedDB.deleteDatabase(LEGACY_DB_NAME);
+}
+
+const MIGRATED_KEY = 'figment.legacyMigrated';
+function markMigrated() {
+  try {
+    localStorage.setItem(MIGRATED_KEY, '1');
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+function openExisting(name: string): Promise<IDBDatabase> {
+  return new Promise<IDBDatabase>((resolve, reject) => {
+    const req = indexedDB.open(name); // current version, so it isn't upgraded
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function keysOf(d: IDBDatabase, store: string): Promise<IDBValidKey[]> {
+  if (!d.objectStoreNames.contains(store)) return [];
+  const t = d.transaction(store, 'readonly');
+  return run(t, t.objectStore(store).getAllKeys());
+}
+
+/**
+ * Deleting the old database is blocked while an older build still has it open, so it's retried
+ * on later starts, once every old file is known to exist in the new database.
+ */
+async function removeMigratedLegacy(target: IDBDatabase) {
+  const known = (await indexedDB.databases?.().catch(() => [])) ?? [];
+  if (!known.some((d) => d.name === LEGACY_DB_NAME)) return;
+  let migrated = false;
+  try {
+    migrated = localStorage.getItem(MIGRATED_KEY) === '1';
+  } catch {
+    /* storage unavailable */
+  }
+  if (!migrated) {
+    const legacy = await openExisting(LEGACY_DB_NAME);
+    const [old, cur] = await Promise.all([keysOf(legacy, 'docs'), keysOf(target, 'docs')]);
+    legacy.close();
+    const have = new Set(cur.map(String));
+    if (!old.every((k) => have.has(String(k)))) return;
+    markMigrated();
+  }
   indexedDB.deleteDatabase(LEGACY_DB_NAME);
 }
 
@@ -54,6 +104,7 @@ function db(): Promise<IDBDatabase> {
     let created = false;
     dbp = openDb(DB_NAME, () => (created = true)).then(async (d) => {
       if (created) await migrateLegacy(d).catch((err) => console.warn('Could not migrate saved files', err));
+      else void removeMigratedLegacy(d).catch(() => undefined);
       return d;
     });
   }
@@ -67,14 +118,38 @@ function tx<T>(store: string, mode: IDBTransactionMode, fn: (s: IDBObjectStore) 
   });
 }
 
+// Which saved versions were last written for each file, so they're only rewritten when they change.
+const writtenVersions = new Map<string, string>();
+const versionsKey = (d: DocumentData) => (d.versions ?? []).map((v) => v.id).join(',');
+
+async function getDoc(id: string): Promise<DocumentData | undefined> {
+  const doc = await tx<DocumentData | undefined>('docs', 'readonly', (s) => s.get(id) as IDBRequest<DocumentData | undefined>);
+  if (!doc) return doc;
+  // Files saved by older builds keep their versions inline; newer ones store them separately.
+  if (!doc.versions?.length) doc.versions = (await tx<DocumentData['versions'] | undefined>('versions', 'readonly', (s) => s.get(id) as IDBRequest<DocumentData['versions'] | undefined>)) ?? [];
+  else writtenVersions.delete(id);
+  return doc;
+}
+
+async function putDoc(d: DocumentData) {
+  const key = versionsKey(d);
+  if (writtenVersions.get(d.id) !== key) {
+    await tx('versions', 'readwrite', (s) => s.put(d.versions ?? [], d.id));
+    writtenVersions.set(d.id, key);
+  }
+  await tx('docs', 'readwrite', (s) => s.put({ ...d, versions: [] }));
+}
+
 export const storage = {
   listFiles: () => tx<FileMeta[]>('meta', 'readonly', (s) => s.getAll() as IDBRequest<FileMeta[]>),
   putMeta: (m: FileMeta) => tx('meta', 'readwrite', (s) => s.put(m)),
-  getDoc: (id: string) => tx<DocumentData | undefined>('docs', 'readonly', (s) => s.get(id) as IDBRequest<DocumentData | undefined>),
-  putDoc: (d: DocumentData) => tx('docs', 'readwrite', (s) => s.put(d)),
+  getDoc,
+  putDoc,
   deleteFile: async (id: string) => {
     await tx('meta', 'readwrite', (s) => s.delete(id));
     await tx('docs', 'readwrite', (s) => s.delete(id));
+    await tx('versions', 'readwrite', (s) => s.delete(id));
+    writtenVersions.delete(id);
   },
   getImage: (id: string) => tx<string | undefined>('images', 'readonly', (s) => s.get(id) as IDBRequest<string | undefined>),
   putImage: (id: string, dataUrl: string) => tx('images', 'readwrite', (s) => s.put(dataUrl, id)),

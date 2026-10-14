@@ -12,6 +12,7 @@ import { generateButtons, generateLogin, generatePricingCard } from '../editor/g
 import { Monkey } from './Monkey';
 import { openMenuAt, openRail } from '../store/ui';
 import { newSolid } from './color';
+import { useThrottledVersion } from './useThrottledVersion';
 
 function InlineEdit({ value, onDone }: { value: string; onDone: (v: string | null) => void }) {
   const ref = useRef<HTMLInputElement>(null);
@@ -324,7 +325,7 @@ function LayerRow({ n, depth, expanded, toggle, renaming, setRenaming, filter }:
 
 function Layers({ filter }: { filter: string }) {
   const doc = useStore((s) => s.doc)!;
-  useStore((s) => s.version);
+  useThrottledVersion();
   const pageId = useStore((s) => s.pageId);
   const selection = useStore((s) => s.selection);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -562,7 +563,7 @@ function renderThumb(id: string): string {
 
 function AssetsPanel() {
   const doc = useStore((s) => s.doc)!;
-  const version = useStore((s) => s.version);
+  const version = useThrottledVersion();
   const [q, setQ] = useState('');
   const [library, setLibrary] = useState<'file' | null>(null);
   const components = useMemo(
