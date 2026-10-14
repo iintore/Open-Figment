@@ -31,9 +31,14 @@ function ColorArea({ color, opacity, onChange }: { color: string; opacity: numbe
   const hsvFromColor = rgbToHsv(rgb.r, rgb.g, rgb.b);
   // Keep hue stable for greys.
   const [hue, setHue] = useState(hsvFromColor.h);
-  useEffect(() => {
+  const [hex, setHex] = useState(color);
+  // When the colour changes, follow its hue (unless it's a grey, which has none) and its hex.
+  const [shownColor, setShownColor] = useState(color);
+  if (shownColor !== color) {
+    setShownColor(color);
+    setHex(color);
     if (hsvFromColor.s > 0.01 && hsvFromColor.v > 0.01) setHue(hsvFromColor.h);
-  }, [color]); // eslint-disable-line react-hooks/exhaustive-deps
+  }
   const svRef = useRef<HTMLDivElement>(null);
   const hueRef = useRef<HTMLDivElement>(null);
   const alphaRef = useRef<HTMLDivElement>(null);
@@ -42,8 +47,6 @@ function ColorArea({ color, opacity, onChange }: { color: string; opacity: numbe
     const c = hsvToRgb(h, s, v);
     onChange(rgbToHex(c.r, c.g, c.b), opacity);
   };
-  const [hex, setHex] = useState(color);
-  useEffect(() => setHex(color), [color]);
   return (
     <>
       <div

@@ -1,8 +1,15 @@
 import { Component, type ReactNode } from 'react';
 import { goHome } from '../store/store';
 
+interface Props {
+  children: ReactNode;
+  /** Changing this (e.g. switching tabs) clears the error and tries rendering again. */
+  resetKey?: string;
+}
+
 interface State {
   error: Error | null;
+  resetKey?: string;
 }
 
 /**
@@ -10,19 +17,19 @@ interface State {
  * open file is already saved (saves run on every change), so going back to the file list or
  * reloading loses nothing that was committed.
  */
-export class ErrorBoundary extends Component<{ children: ReactNode; resetKey?: string }, State> {
-  state: State = { error: null };
+export class ErrorBoundary extends Component<Props, State> {
+  state: State = { error: null, resetKey: this.props.resetKey };
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     return { error };
+  }
+
+  static getDerivedStateFromProps(props: Props, state: State): Partial<State> | null {
+    return props.resetKey !== state.resetKey ? { error: null, resetKey: props.resetKey } : null;
   }
 
   componentDidCatch(error: Error) {
     console.error('Figment crashed while rendering', error);
-  }
-
-  componentDidUpdate(prev: { resetKey?: string }) {
-    if (this.state.error && prev.resetKey !== this.props.resetKey) this.setState({ error: null });
   }
 
   render() {

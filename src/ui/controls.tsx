@@ -23,10 +23,8 @@ export function NumberField(props: {
   const scale = props.scale ?? 1;
   const display = props.value === 'mixed' ? '' : fmtNum(props.value * scale, props.decimals ?? 2);
   const [text, setText] = useState(display);
+  // While not focused the field shows `display` directly; `text` is only the draft being typed.
   const [focused, setFocused] = useState(false);
-  useEffect(() => {
-    if (!focused) setText(display);
-  }, [display, focused]);
   const clamp = (v: number) => Math.max(props.min ?? -Infinity, Math.min(props.max ?? Infinity, v));
   const commit = (raw: string) => {
     const cur = props.value === 'mixed' ? 0 : props.value * scale;
@@ -104,7 +102,12 @@ export function NumberField(props: {
 
 export function TextField(props: { value: string; onChange: (v: string) => void; placeholder?: string; className?: string }) {
   const [text, setText] = useState(props.value);
-  useEffect(() => setText(props.value), [props.value]);
+  // Follow the value when it changes from outside (e.g. a different layer is selected).
+  const [shown, setShown] = useState(props.value);
+  if (shown !== props.value) {
+    setShown(props.value);
+    setText(props.value);
+  }
   return (
     <label className={'field no-label ' + (props.className ?? '')}>
       <input

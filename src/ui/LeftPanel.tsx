@@ -332,10 +332,13 @@ function Layers({ filter }: { filter: string }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [renaming, setRenaming] = useState<string | null>(null);
   const page = getPage(doc, pageId);
-  useEffect(() => {
+  // Expand the layers that contain a newly selected layer so it's visible.
+  const [seenSelection, setSeenSelection] = useState(selection);
+  if (seenSelection !== selection) {
+    setSeenSelection(selection);
     const need = selection.flatMap((id) => (doc.nodes[id] ? ancestors(doc, id).map((a) => a.id) : []));
     if (need.some((id) => !expanded.has(id))) setExpanded(new Set([...expanded, ...need]));
-  }, [selection]); // eslint-disable-line react-hooks/exhaustive-deps
+  }
   useEffect(() => {
     const onRename = (e: Event) => {
       const id = (e as CustomEvent<string>).detail;

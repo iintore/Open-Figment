@@ -35,12 +35,15 @@ export function Presenter() {
   const [cursor, setCursor] = useState('default');
   const currentCanvas = useRef<HTMLCanvasElement | null>(null);
 
-  useEffect(() => {
+  // Each presentation starts at its first frame with an empty back history.
+  const [started, setStarted] = useState(presenting);
+  if (started !== presenting) {
+    setStarted(presenting);
     if (presenting) {
       setFrameId(presenting.frameId);
       setHistory([]);
     }
-  }, [presenting]);
+  }
 
   const frames = useCallback(() => {
     const s = get();

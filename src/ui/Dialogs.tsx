@@ -28,12 +28,17 @@ export function QuickActions() {
       .map((x) => x.c)
       .slice(0, 40);
   }, [q, cmds]);
-  useEffect(() => {
+  // Start fresh each time the palette opens.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
     if (open) {
       setQ('');
       setHl(0);
-      requestAnimationFrame(() => ref.current?.focus());
     }
+  }
+  useEffect(() => {
+    if (open) requestAnimationFrame(() => ref.current?.focus());
   }, [open]);
   if (!open) return null;
   const run = (i: number) => {
