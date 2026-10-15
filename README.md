@@ -7,6 +7,8 @@ account, no server: your files stay on your device.
 [![CI](https://github.com/iintore/open-figment/actions/workflows/ci.yml/badge.svg)](https://github.com/iintore/open-figment/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+**Design system:** the foundations, components and blocks of this app are documented in [Open Figment Design System](https://github.com/iintore/Open-Figment-Design-System).
+
 ## Features
 
 - **Canvas:** infinite pan and zoom, rulers, pixel grid, outline mode, smart guides with
@@ -56,6 +58,11 @@ Then open <http://localhost:5173>. A sample file is created on first run.
 | `npm run desktop` | Build and open the app in Electron |
 | `npm run dist:mac` | Package the macOS app (`release/<version>/*.dmg` and `.zip`) |
 | `npm run icon` | Regenerate `build/icon.png` from the logo |
+
+### Deploying the web app
+
+The web app is a static site (`npm run build` → `dist/`). `vercel.json` configures Vercel: it
+skips Electron's binary download during install, since only the desktop build needs it.
 
 ### macOS app
 

@@ -28,3 +28,6 @@ test-results/
 
 # Local agent worktrees and settings
 .claude/
+
+# Vercel
+.vercel
