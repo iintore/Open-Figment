@@ -7,7 +7,10 @@ account, no server: your files stay on your device.
 [![CI](https://github.com/iintore/open-figment/actions/workflows/ci.yml/badge.svg)](https://github.com/iintore/open-figment/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**Design system:** the foundations, components and blocks of this app are documented in [Open Figment Design System](https://github.com/iintore/Open-Figment-Design-System).
+**Try it:** [open-figment.vercel.app](https://open-figment.vercel.app)  
+**Design system:** the foundations, components and blocks of this app are documented at
+[open-figment-design-system.vercel.app](https://open-figment-design-system.vercel.app)
+([source](https://github.com/iintore/Open-Figment-Design-System)).
 
 ## Features
 

@@ -32,3 +32,4 @@ test-results/
 # Vercel
 .vercel
 dist-docs
+.env*

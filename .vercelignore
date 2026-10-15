@@ -1,0 +1,12 @@
+# Only the web app's source is needed to build on Vercel.
+release
+dist
+dist-docs
+node_modules
+build
+electron
+e2e
+playwright-report
+test-results
+.claude
+.env*
