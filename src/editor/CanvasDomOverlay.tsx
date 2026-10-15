@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { get, mutate, set, useStore } from '../store/store';
 import { uid } from '../model/doc';
 import { worldToScreen } from './viewport';
+import { Icon } from '../ui/icons';
 
 function timeAgo(t: number) {
   const s = Math.floor((Date.now() - t) / 1000);
@@ -41,7 +42,7 @@ export function CommentThreadPopover({ id, onClose }: { id: string; onClose: () 
                 })
               }
             >
-              {thread.resolved ? '↺' : '✓'}
+              {thread.resolved ? <Icon.rotate /> : <Icon.check />}
             </button>
           )}
           <button
@@ -54,10 +55,10 @@ export function CommentThreadPopover({ id, onClose }: { id: string; onClose: () 
               onClose();
             }}
           >
-            🗑
+            <Icon.trash />
           </button>
           <button className="icon-btn" title="Close" onClick={onClose}>
-            ✕
+            <Icon.close />
           </button>
         </div>
       </div>
