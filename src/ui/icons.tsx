@@ -20,7 +20,7 @@ export const Icon = {
   ),
   hand: () => (
     <S>
-      <path transform="translate(11.75 11.6) scale(.9) translate(-11.75 -12.4)" strokeWidth={1 / 0.9} d="M8.5 12.5V8.25a1 1 0 0 1 2 0v3.25-5a1 1 0 0 1 2 0v5-4a1 1 0 0 1 2 0v4.25-2.75a1 1 0 0 1 2 0v4.75c0 3.1-2 5.5-4.75 5.5h-.4c-1.55 0-2.6-.6-3.55-1.75l-2.4-3a1 1 0 0 1 1.5-1.3l1.6 1.55" />
+      <path transform="translate(12.4 11.9) scale(.9) translate(-11.75 -12.4)" strokeWidth={1 / 0.9} d="M8.5 12.5V8.25a1 1 0 0 1 2 0v3.25-5a1 1 0 0 1 2 0v5-4a1 1 0 0 1 2 0v4.25-2.75a1 1 0 0 1 2 0v4.75c0 3.1-2 5.5-4.75 5.5h-.4c-1.55 0-2.6-.6-3.55-1.75l-2.4-3a1 1 0 0 1 1.5-1.3l1.6 1.55" />
     </S>
   ),
   frame: () => (
@@ -78,8 +78,12 @@ export const Icon = {
   ),
   pen: () => (
     <S>
-      <path d="M6.2 6.2 13.4 8.3l3.4 3.4-5.1 5.1-3.4-3.4zM6.2 6.2l4.3 4.3M16.8 11.7l1.5 1.5a.7.7 0 0 1 0 1l-3.1 3.1a.7.7 0 0 1-1 0l-1.5-1.5" />
-      <circle cx="11.3" cy="11.3" r="1.25" />
+      <g transform="translate(12 12) scale(1.15) translate(-12.8 -12.8) rotate(-45 12 12)" strokeWidth={1 / 1.15} strokeLinejoin="miter" strokeMiterlimit={4}>
+        <path d="M12 6 15 13H9z" />
+        <rect x="9" y="14.5" width="6" height="3" />
+        <path d="M12 6v4" />
+        <circle cx="12" cy="11" r=".75" fill="currentColor" stroke="none" />
+      </g>
     </S>
   ),
   pencil: () => (
