@@ -418,6 +418,14 @@ svg {
   width: 20px;
   height: 20px;
 }
+/* 20px buttons draw their 24px icons at 20px, centred, with the stroke compensated so it
+   still renders 1px (1.2 × 20/24). */
+.icon-btn.sm > svg,
+.tab .tab-close > svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.2;
+}
 .pages {
   padding-bottom: 8px;
   border-bottom: 1px solid var(--color-border);
